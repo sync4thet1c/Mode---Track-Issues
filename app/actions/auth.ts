@@ -38,3 +38,122 @@ export type ActionResponse = {
   errors?: Record<string, string[]>
   error?: string
 }
+
+export async function signIn(formData: FormData): Promise<ActionResponse> {
+  try {
+    await mockDelay(700)
+    const data = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+    }
+
+    const validationResult = SignInSchema.safeParse(data)
+    if (!validationResult.success) {
+      return {
+        success: false,
+        message: 'Validation failed',
+        errors: validationResult.error.flatten().fieldErrors,
+      }
+    }
+
+    const user = await getUserByEmail(data.email)
+    if (!user) {
+      return {
+        success: false,
+        message: 'Invalid email or password',
+        errors: {
+          email: ['Invalid email or password'],
+        },
+      }
+    }
+
+    const isPasswordValid = await verifyPassword(data.password, user.password)
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        message: 'Invalid email or password',
+        errors: {
+          password: ['Invalid email or password'],
+        },
+      }
+    }
+
+    await createSession(user.id)
+
+    return {
+      success: true,
+      message: 'Signed in Successfully',
+    }
+  } catch (error) {
+    console.error('Sign in error', error)
+    return {
+      success: false,
+      message: 'An error occured while signing in',
+      error: 'Failed to sign in',
+    }
+  }
+}
+
+
+export async function signUp(formData: FormData): Promise<ActionResponse> {
+  try {
+    const data = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+      confirmPassword: formData.get('confirmPassword') as string
+    }
+    
+    const validationResult = SignUpSchema.safeParse(data)
+    if(!validationResult.success) { 
+      return { 
+        success: false,
+        message: 'Validation failed',
+        errors: validationResult.error.flatten().fieldErrors,
+      }
+    } 
+
+    const existingUser = await getUserByEmail(data.email)
+    if(existingUser) {
+      return {
+        success: false, 
+        message: 'User with this email already exists',
+        errors: {
+          email: ['User with this email already exists'],
+        }
+      }
+    }
+
+    const user = await createUser(data.email, data.password)
+    if(!user) {
+      return {
+        success: false, 
+        message: 'Failed to create user',
+        error: 'Failed to create user',
+      }
+    }
+
+    await createSession(user.id) 
+    return {
+      success: true,
+      message: 'Account created successfully',
+    }
+  } catch(error) {
+    console.error('Sign up error', error)
+    return {
+      success: false,
+      message: 'An error occured while creating your account',
+      error: 'Failed to create account',
+    }
+  }
+}
+
+export async function signOut(): Promise<ActionResponse> {
+    try {
+      await deleteSession()
+    } catch (error) {
+      console.error('Sing out error', error)
+      throw new Error('Failed to sign out')
+    } finally {
+      redirect('/signin')
+    }
+  }
