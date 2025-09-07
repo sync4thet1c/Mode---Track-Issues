@@ -5,10 +5,10 @@ const nextConfig: NextConfig = {
     dynamicIO: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   }
 }
 
